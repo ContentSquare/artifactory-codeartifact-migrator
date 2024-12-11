@@ -16,7 +16,7 @@ def database_commit(execution, db_file):
   :param db_file: filename to create
   """
   conn = None
-  logger.debug(f"Committing: {execution}")
+  logger.info(f"Committing: {execution}")
   try:
     conn = sqlite3.connect(db_file, timeout=10)
     cur = conn.cursor()
@@ -59,7 +59,7 @@ def check_create_database(args, db_file):
   doesn't exist and creates default table if it also doesn't exist
 
   :param db_file: filename to create
-  """  
+  """
   if args.dynamodb:
     dynamodb.dynamodb_check_create_tables(db_file)
   else:
@@ -140,7 +140,7 @@ def insert_package_version(args, package, repository, version, db_file):
   :param version: version to insert
   :param db_file: database filename
   """
-  if args.dynamodb:    
+  if args.dynamodb:
     dynamodb.dynamodb_insert_package_version(package, repository, version, db_file)
   else:
     command = f"""
@@ -157,7 +157,7 @@ def insert_repository(args, repository, db_file):
   :param repository: repository to insert
   :param db_file: database filename
   """
-  if args.dynamodb:    
+  if args.dynamodb:
     dynamodb.dynamodb_insert_repository(repository, db_file)
   else:
     command = f"""

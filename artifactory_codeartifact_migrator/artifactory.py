@@ -43,7 +43,7 @@ class TimeoutHTTPAdapter(HTTPAdapter):
 retry_strategy = Retry(
     total=10,
     status_forcelist=[429, 500, 502, 503, 504],
-    method_whitelist=["HEAD", "GET", "OPTIONS"],
+    allowed_methods=["HEAD", "GET", "OPTIONS"],
     backoff_factor=1
 )
 
@@ -88,7 +88,7 @@ def artifactory_package_search(args, package, repository):
   :param repository: repository to scans
   :return: boolean of success
   """
-  
+
   package_search = artifactory_http_call(args, '/api/storage/' + repository + '/' + package)
   success = False
   if repository + '/' + package in package_search.get('uri'):
@@ -103,19 +103,19 @@ def artifactory_package_binary_search(args, package_dict):
   :param args: arguments passed to cli command
   :param package_dict: standard package dictionary to inspect
   :return: list of binary uri's
-  """  
-  
-  binaries = []  
+  """
+
+  binaries = []
   if package_dict['type'] == 'pypi':
     if args.artifactoryprefix:
       prefix = f"/{args.artifactoryprefix}"
     else:
       prefix = ""
     uri = f"{args.artifactoryprotocol}://{args.artifactoryhost}{prefix}/{package_dict['repository']}/{package_dict['package'].split('/')[-1]}"
-    binary_search = artifactory_http_call(args, f"/api/storage/{package_dict['repository']}/{package_dict['package'].split('/')[-1]}?list&deep=1")    
+    binary_search = artifactory_http_call(args, f"/api/storage/{package_dict['repository']}/{package_dict['package'].split('/')[-1]}?list&deep=1")
     if binary_search.get('files'):
       for i in binary_search.get('files'):
-        if package_dict.get('version'):         
+        if package_dict.get('version'):
           if '/' + package_dict.get('version') + '/' in i['uri']:
             # Avoid files that aren't standard binaries
             ## ToDo: This should just be a regex search with $ end
@@ -126,9 +126,9 @@ def artifactory_package_binary_search(args, package_dict):
         else:
           binaries.append(f"{uri}{i['uri']}")
     else:
-      logger.info(f"No files found in Artifactory for {package_dict['repository']} {package_dict['package']}")  
+      logger.info(f"No files found in Artifactory for {package_dict['repository']} {package_dict['package']}")
   else:
-    binary_search = artifactory_http_call(args, '/api/search/artifact?name=' + package_dict['package'].split('/')[-1] + '&repos=' + package_dict['repository'])    
+    binary_search = artifactory_http_call(args, '/api/search/artifact?name=' + package_dict['package'].split('/')[-1] + '&repos=' + package_dict['repository'])
     for i in binary_search['results']:
       if '/' + package_dict.get('package') + '/' in i['uri']:
         if package_dict.get('version'):
@@ -149,7 +149,7 @@ def artifactory_package_binary_search(args, package_dict):
             sys.exit(1)
         else:
           binaries.append(i['uri'])
-  logger.debug(f"Binaries discovered:\n{binaries}")  
+  logger.debug(f"Binaries discovered:\n{binaries}")
   return binaries
 
 def artifactory_binary_fetch(args, package_path, replication_path, folder):
