@@ -2,3 +2,4 @@ dist/**
 build/**
 artifactory_codeartifact_migrator.egg-info/**
 .terraform
+__pycache__
