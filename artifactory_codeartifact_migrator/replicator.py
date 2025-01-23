@@ -61,12 +61,14 @@ def get_package_type(repository, artifactory_repos):
   success = False
   for repo in artifactory_repos:
     if repo['repoKey'] == repository:
+      logger.info("repo matched")
       success = True
       repo_to_check = repo
       break
   if not success:
     logger.critical(f"Repository {repository} not found in Artifactory list retrieved")
-    sys.exit(1)  
+    sys.exit(1)
+  logger.info("laa")
   if repo_to_check.get('packageType'):
     if repo_to_check['repoType'] == "LOCAL":
       return repo_to_check['packageType'].lower()
@@ -84,11 +86,18 @@ def check_artifactory_repos(repos, artifactory_repos):
   success_all = []
   for repo in repos.split(" "):
     success = {
-      'repository': repos, 
+      'repository': repos,
       'success': False
     }
+
     for repository in artifactory_repos:
+      name = repository["repoKey"]
+      if repository['repoKey'] == "TOTAL":
+        break
+      type = repository["packageType"]
+      logger.info(f"Repositoryyy {name}: {type}")
       if repository['repoKey'] == repo:
+        logger.info(f"repo matchedddd")
         success['success'] = True
     success_all.append(success)
   for result in success_all:
@@ -172,7 +181,7 @@ def replicate_package(args, client, token_codeartifact, package_dict, db_file):
   if not package_dict.get('version'):
     all_packages_published = True
     # Get all versions of the package and append to list to replicate
-    skip = False    
+    skip = False
     if args.cache:
       if caching.check_all_versions_published(args, package_dict['package'], package_dict['repository'], db_file):
         logger.info(f"Cache: All versions of package {package_dict['package']} in repository {package_dict['repository']} already published, skipping'")
@@ -205,7 +214,7 @@ def replicate_package(args, client, token_codeartifact, package_dict, db_file):
             package_full = package_dict
             package_full['version'] = version
             if package_full not in packages_to_replicate_temp:
-              packages_to_replicate_temp.append(package_full)              
+              packages_to_replicate_temp.append(package_full)
               if args.cache:
                 # Insert package version if not in cache yet
                 if not caching.check_package_version(args, package_dict['package'], package_dict['repository'], package_dict['version'], db_file):
@@ -228,10 +237,10 @@ def replicate_package(args, client, token_codeartifact, package_dict, db_file):
   packages_to_replicate = []
   for temp_dict in packages_to_replicate_temp:
     skip = False
-    if args.cache:      
+    if args.cache:
       if caching.check_version_published(args, temp_dict['package'], temp_dict['repository'], temp_dict['version'], db_file):
         logger.info(f"Cache: Package {temp_dict['package']} version {temp_dict['version']} in repository {temp_dict['repository']} already published, skipping.")
-        skip = True      
+        skip = True
 
     if skip == False:
       check_result = codeartifact.codeartifact_check_package_version(args, client, temp_dict)
@@ -249,7 +258,7 @@ def replicate_package(args, client, token_codeartifact, package_dict, db_file):
 
   logger.debug(f"Packages to replicate: {packages_to_replicate}")
   regex = re.compile("[$&+,:;=?#|'<>^*()%!\"\s\[\]]")
-  for package in packages_to_replicate:    
+  for package in packages_to_replicate:
     publish_error = ""
     publish_fail = False
     if re.search(regex, package['package']) or re.search(regex, package['version']):
@@ -286,7 +295,7 @@ def replicate_package(args, client, token_codeartifact, package_dict, db_file):
               publish_error = publish_error + " -- "
             publish_error = publish_error + f"{response.status_code}, {response.reason}, {response.text}"
       # Required after pushing maven jar/pom's
-      if package['type'] == 'maven' and publish_fail == False:        
+      if package['type'] == 'maven' and publish_fail == False:
         # This sets maven versions to published status
         uri = uri_formatted.removesuffix(uri_formatted.split('/')[-1]) + "maven-metadata.xml"
         if args.dryrun:
@@ -320,12 +329,12 @@ def replicate_package(args, client, token_codeartifact, package_dict, db_file):
           publish_error = publish_error + " -- "
         publish_error = (publish_error + missing_error).replace("'", '"')
       success = False
-      if args.cache:        
-        if publish_fail == True:          
+      if args.cache:
+        if publish_fail == True:
           caching.set_publish_fail(args, package['package'], package['repository'], package['version'], db_file)
           all_packages_published == False
-        if publish_error != "":          
-          caching.set_publish_error(args, package['package'], package['repository'], package['version'], publish_error, db_file)          
+        if publish_error != "":
+          caching.set_publish_error(args, package['package'], package['repository'], package['version'], publish_error, db_file)
         if success == True:
           logger.debug(f"Cache: Setting package {package['repository']} {package['package']} {package['version']} to codeartifact published")
           caching.set_package_version_to_published(args, package['package'], package['repository'], package['version'], db_file)
@@ -389,19 +398,19 @@ def replicate_specific_packages(args, client, artifactory_repos, codeartifact_re
       if package_split[1] == '':
         logger.critical(f"You specified a package version with ':' for package {package}. However, you left the version blank.")
         sys.exit(1)
-      
+
       package_dict = {'repository': args.repositories, 'package': package_name, 'type': package_type, 'endpoint': endpoint}
 
       package_dict['version'] = package_split[1]
 
       package_dict = append_package_specific_keys(args, package_dict)
-      
+
       if args.cache:
         if not caching.check_version_published(args, package_name, args.repositories, package_dict['version'], db_file):
           replicate_package(args, client, token_codeartifact, package_dict, db_file)
           caching.set_package_version_to_published(args, package_name, package_dict['repository'], package_dict['version'], db_file)
-        else:          
-          logger.info(f"Cache: Package {package_dict['repository']} {package_name} version {package_dict['version']} already published, skipping.")          
+        else:
+          logger.info(f"Cache: Package {package_dict['repository']} {package_name} version {package_dict['version']} already published, skipping.")
       else:
         replicate_package(args, client, token_codeartifact, package_dict, db_file)
     else:
@@ -476,7 +485,7 @@ def replicate_all_package_versions(args, client, token_codeartifact, packagerepo
   if versions == []:
     logger.warning(f"No versions of package {package} were found in Artifactory, skipping.")
   else:
-    logger.debug(f"Versions of package {package}: {versions}")      
+    logger.debug(f"Versions of package {package}: {versions}")
     for version in versions:
       if args.cache:
         if not caching.check_package_version(args, package, repository, version, db_file):
@@ -494,7 +503,7 @@ def replicate_all_package_versions(args, client, token_codeartifact, packagerepo
 
   return versions_published
 
-def replicate_repository(args, client, repository, package_type, codeartifact_repos, db_file):
+def replicate_repository(args, client, repository, package_tape, codeartifact_repos, db_file):
   """
   replicate_repository replicates an entire specified repository
 
@@ -505,16 +514,16 @@ def replicate_repository(args, client, repository, package_type, codeartifact_re
   :codeartifact_repos: list of current codeartifact repos
   :param db_file: database filename
   """
-  if package_type not in supported_packages:
-    logger.warning(f"Repository {repository} package type {package_type} not supported.")
+  if package_tape not in supported_packages:
+    logger.warning(f"Repository {repository} package type {package_tape} not supported.")
     return
 
   if args.dryrun:
     logger.info(f"Dryrun: Would check and create repository {repository} in codeartifact")
     endpoint = f"codeartifact-test-endpoint-dryrun.com/{repository}"
-  else:    
-    codeartifact.codeartifact_check_create_repo(args, client, repository, codeartifact_repos)    
-    endpoint = codeartifact.codeartifact_get_repository_endpoint(args, client, repository, package_type)
+  else:
+    codeartifact.codeartifact_check_create_repo(args, client, repository, codeartifact_repos)
+    endpoint = codeartifact.codeartifact_get_repository_endpoint(args, client, repository, package_tape)
 
   package_list = []
 
@@ -544,13 +553,13 @@ def replicate_repository(args, client, repository, package_type, codeartifact_re
     jsondata = artifactory.artifactory_http_call(args, f"/api/storage/{repository}?list&deep=1&listFolders=0")
 
     for file in jsondata['files']:
-      if package_type == 'npm':
+      if package_tape == 'npm':
         # Avoid .npm metadata folders
         if not re.search('^/.npm', file['uri']):
           package_name = re.sub('^/', '', file['uri']).split('/-/')[0]
           if package_name not in package_list:
             package_list.append(package_name)
-      elif package_type in ['pypi', 'maven']:
+      elif package_tape in ['pypi', 'maven']:
         if not re.search("maven-metadata.xml", file['uri']):
           uri_strip = re.sub('^/', '', file['uri'])
           uri_list = uri_strip.split('/')
@@ -584,7 +593,7 @@ def replicate_repository(args, client, repository, package_type, codeartifact_re
 
   for package in package_list:
     versions_published = True
-    package_dict = {'package': package, 'repository': repository, 'package_type': package_type, 'endpoint': endpoint}
+    package_dict = {'package': package, 'repository': repository, 'package_type': package_tape, 'endpoint': endpoint}
     # If user specified only single process, we go right to processing
     if int(args.procs) == 1:
       proclist.append(package_dict)
@@ -613,7 +622,7 @@ def replicate_repository(args, client, repository, package_type, codeartifact_re
       lazy_results = []
 
       for item in proclist:
-        # logger.info(item)        
+        # logger.info(item)
         lazy_result = dask.delayed(replicate_all_package_versions)(args, client, token_codeartifact, item, db_file)
         lazy_results.append(lazy_result)
 
@@ -696,7 +705,7 @@ def replicate(args):
         logger.critical('You specified packages to replicate. However you also specified multiple repositories. You can only specify one repository if specifying packages to replicate.')
         sys.exit(1)
       else:
-        if args.refresh:                  
+        if args.refresh:
           logger.info(f"Refreshing all packages in {args.repositories}")
           caching.reset_fetched_packages(args.repositories, db_file)
         check_artifactory_repos(args.repositories, artifactory_repos)
@@ -711,8 +720,8 @@ def replicate(args):
       if args.refresh:
         logger.info(f"Refreshing all packages in {repository}")
         caching.reset_fetched_packages(args, repository, db_file)
-        package_type = get_package_type(repository, artifactory_repos)
-      replicate_repository(args, client, repository, package_type, codeartifact_repos, db_file)
+      package_toupe = get_package_type(repository, artifactory_repos)
+      replicate_repository(args, client, repository, package_toupe, codeartifact_repos, db_file)
   else:
     logger.info('All repository replication specified')
     for repo in artifactory_repos:
@@ -722,8 +731,8 @@ def replicate(args):
           if args.refresh:
             logger.info(f"Refreshing all packages in {repository}")
             caching.reset_fetched_packages(args, repository, db_file)
-          package_type = get_package_type(repository, artifactory_repos)
-          replicate_repository(args, client, repository, package_type, codeartifact_repos, db_file)
+          package_toupe = get_package_type(repository, artifactory_repos)
+          replicate_repository(args, client, repository, package_toupe, codeartifact_repos, db_file)
 
   if args.dryrun:
     logger.info('Dryrun operations completed')

@@ -48,7 +48,7 @@ def getArgs():
   parser.add_argument(
     '-p',
     '--procs',
-    help = 'Number of processes to parallelize repository replication',    
+    help = 'Number of processes to parallelize repository replication',
     default="4"
   )
   parser.add_argument(
@@ -103,6 +103,10 @@ def getArgs():
   parser.add_argument(
     '--packages',
     help = 'Specify packages to replicate from Artifactory. See documentation for appropriate package values. If you specify this argument, you must supply only one repository.'
+  )
+  parser.add_argument(
+    '--destrepository',
+    help = 'dest repo overwrite',
   )
 
   parser.parse_args(sys.argv[1:], namespace=args)
