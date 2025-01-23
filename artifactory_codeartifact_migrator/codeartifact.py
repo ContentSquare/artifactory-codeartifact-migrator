@@ -65,7 +65,7 @@ def codeartifact_check_package_version(args, client, package_dict):
   :param package_dict: standard package dictionary to inspect
   :return: int response result
   """
-  if package_dict['type'] == 'npm':    
+  if package_dict['type'] == 'npm':
     package_split = package_dict['package'].split('/')
     package = package_split[-1]
     if len(package_split) > 1:
@@ -159,7 +159,7 @@ def codeartifact_get_repository_endpoint(args, client, repository, format):
   try:
     response = client.get_repository_endpoint(
         domain=args.codeartifactdomain,
-        repository=repository,
+        repository=args.destrepository,
         format=format
     )
     repo_dict = json.loads(str(response).replace("\'", "\""))
@@ -242,13 +242,13 @@ def codeartifact_upload_npm(token_codeartifact, package_dict, binary):
   :param package_dict: standard package dictionary to inspect
   :param binary: local binary to upload
   :return: http response object
-  """  
+  """
   data = package_dict['metadata']
 
   filename = binary.split('/')[-1]
-  file_package = package_dict['package'] + '-' + package_dict['version'] + '.tgz'  
+  file_package = package_dict['package'] + '-' + package_dict['version'] + '.tgz'
 
-  with open(binary, "rb") as fp:    
+  with open(binary, "rb") as fp:
     # _rev key must be removed from metadata before publishing
     data.pop('_rev', None)
 
@@ -270,7 +270,7 @@ def codeartifact_upload_npm(token_codeartifact, package_dict, binary):
     # The metadata by default will list all versions, we only want to publish a single version metadata
     version_spec = data['versions'][package_dict['version']]
     data['versions'] = {}
-    data['versions'][package_dict['version']] = version_spec    
+    data['versions'][package_dict['version']] = version_spec
 
     session = requests.session()
 
@@ -278,7 +278,7 @@ def codeartifact_upload_npm(token_codeartifact, package_dict, binary):
       ("aws", token_codeartifact)
     )
 
-    url = package_dict['endpoint'] + package_dict['package'].replace('/', '%2f')    
+    url = package_dict['endpoint'] + package_dict['package'].replace('/', '%2f')
 
     response = session.put(
         url,
@@ -287,7 +287,7 @@ def codeartifact_upload_npm(token_codeartifact, package_dict, binary):
         headers = {"Content-Type": 'application/json'}
     )
 
-  fp.close()  
+  fp.close()
 
   return response
 
@@ -392,7 +392,7 @@ def codeartifact_upload_binary(args, client, token_codeartifact, package_dict, b
     response = codeartifact_upload_pypi(token_codeartifact, package_dict, binary)
   elif package_dict['type'] == 'maven':
     response = codeartifact_upload_maven(token_codeartifact, package_dict, binary)
-  else:    
+  else:
     logger.critical(f"Package type {package_dict['type']} not supported")
     sys.exit(1)
   return response
